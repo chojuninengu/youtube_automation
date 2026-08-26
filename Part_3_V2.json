@@ -276,7 +276,7 @@
         "description": "={{ $json.output.scenes[0].video_description }}",
         "categoryId": "1",
         "privacyStatus": "private",
-        "mediaContent": "={{ $('Shotstack Poll Result').item.json.response.url }}"
+        "binaryPropertyName": "data"
       },
       "type": "n8n-nodes-base.youTube",
       "typeVersion": 1,
@@ -423,6 +423,22 @@
       ],
       "id": "21837083-9b57-490e-86f2-0f6becdb1ee9",
       "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Shotstack Poll Result').item.json.response.url }}",
+        "responseFormat": "file",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        264,
+        736
+      ],
+      "id": "download_video_node",
+      "name": "Download Video"
     }
   ],
   "pinData": {},
@@ -649,6 +665,17 @@
           {
             "node": "Generate Video Prompts1",
             "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Video": {
+      "main": [
+        [
+          {
+            "node": "Upload to YouTube",
+            "type": "main",
             "index": 0
           }
         ]
