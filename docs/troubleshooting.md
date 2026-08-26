@@ -29,3 +29,7 @@ This document tracks common issues encountered during the initial setup of Sketc
 ### 7. YouTube Node "Bad request - please check your parameters"
 **Issue:** The native YouTube node expects a binary file, but we were passing it a URL.
 **Solution:** An HTTP Request node must be inserted before the YouTube node to download the video from the Shotstack URL into a binary property (e.g. `data`), which the YouTube node then uploads. (Fixed in Part_3_V2).
+
+### 8. Analyze an image: "The resource you are requesting could not be found"
+**Issue:** The Gemini API rejects the image generation or analysis request because the model name is invalid or deprecated (e.g., `gemini-3-pro-preview`).
+**Solution:** The model names in the workflow have been updated to use the correct production models (`gemini-1.5-flash` for analysis and `gemini-3.1-flash-image` for generation). (Fixed in Part_1_V2 and Part_2_V2).
