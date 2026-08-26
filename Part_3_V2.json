@@ -278,7 +278,7 @@
         "privacyStatus": "private",
         "mediaContent": "={{ $('Shotstack Poll Result').item.json.response.url }}"
       },
-      "type": "n8n-nodes-base.googleYouTube",
+      "type": "n8n-nodes-base.youTube",
       "typeVersion": 1,
       "position": [
         464,

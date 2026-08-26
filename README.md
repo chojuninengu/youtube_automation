@@ -40,8 +40,11 @@ Before importing the workflows, you need three key APIs:
    - Get a key from ElevenLabs for AI voice narration. (The free tier gives 10k chars/month. $5/mo gives 30k chars/month).
 4. **Google YouTube OAuth2 API**:
    - You need to create a Google Cloud Project, enable the YouTube Data API v3, and set up an OAuth Consent Screen. Add the Client ID and Secret to a new credential in n8n.
-5. **Cloudinary API**:
-   - Get a free Cloudinary account for temporary image hosting and add the credentials.
+6. **Cloudinary Community Node**:
+   - Go to **Settings > Community Nodes** in n8n.
+   - Click **Install a community node**.
+   - Type `n8n-nodes-cloudinary` and click Install.
+   - Once installed, you can add your Cloudinary API keys to the credentials.
 
 ---
 
