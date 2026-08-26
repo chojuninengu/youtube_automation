@@ -1,0 +1,406 @@
+{
+  "name": "From Drawing to Story: Auto-Publish AI Video to YouTube with Blotato - PART 2 - vide",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "# 🎬 From Drawing to Story — Auto-Publish AI Video to YouTube with Blotato\n\nTransform a hand-drawn sketch into a fully narrated, animated video — automatically generated and published to YouTube.\n\n> ⚠️ **This template is split into 3 separate workflows.**\n> Each part must be imported into its **own workflow** in n8n.\n\n---\n\n## 🎥 Tutorial\n\n@[youtube](bmx4IHX5lhI)\n\n---\n\n## ⚙️ How It Works\n\n- **Part 1** — Analyze the drawing, generate character images & write the story\n- **Part 2** — Generate scene images with character consistency\n- **Part 3** — Generate videos, narrate with AI audio & auto-publish to YouTube\n\n---\n\n## 🔐 Credentials Needed\n\n- **[Blotato](https://blotato.com/?ref=firas)** — YouTube / TikTok publishing\n- **[AtlasCloud](https://www.atlascloud.ai?ref=8QKPJE)** — Kling Pro 3.0 video generation\n- **Anthropic** — Claude AI (story & prompts)\n- **ElevenLabs** — Narration audio\n- **Shotstack** — Final video assembly\n- **Nano Banana** — Image generation\n\n---\n\n## 🚀 Setup Steps\n\n1. Configure credentials for each service above in n8n\n2. Set up a form trigger with a file upload field for the drawing\n3. Deploy the 3 workflows in order and connect them via webhooks\n4. Run a test submission with a simple sketch to validate the full pipeline",
+        "height": 2000,
+        "width": 816
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2160,
+        -368
+      ],
+      "id": "955a80f8-9e2f-4f13-a1fd-774d63cba56b",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "87f99887-37fa-432a-ba5b-fd8043373e64",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1168,
+        -304
+      ],
+      "id": "9eae4262-8c29-4783-8853-4bb8235b3ea6",
+      "name": "Webhook",
+      "webhookId": "87f99887-37fa-432a-ba5b-fd8043373e64"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\n\nreturn body.chunks.map(chunk => ({\n  json: {\n    title: body.title,\n    chunk_number: chunk.chunk_number,\n    script: chunk.script,\n    image_prompt: chunk.image_prompt,\n    duration_seconds: chunk.duration_seconds,\n    characters_used: chunk.characters_used,\n    character_images: chunk.character_images\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -944,
+        -304
+      ],
+      "id": "7e457bc0-8e47-48c2-83dd-1a90c4ade218",
+      "name": "Split Scene Chunks"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Webhook').first().json.body;\n\nreturn body.characters.map(c => ({\n  json: {\n    character_index: c.character_index,\n    image_url: c.image_url\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -736,
+        -304
+      ],
+      "id": "c93f90b5-3e5a-4172-9354-66ce33a59898",
+      "name": "Extract Character URLs"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.image_url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -560,
+        -304
+      ],
+      "id": "22dc84ba-33a1-470b-8f8a-dbfb283125da",
+      "name": "Download Character Images"
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -352,
+        -304
+      ],
+      "id": "28301cfa-2ac7-4134-942c-fa2f61691576",
+      "name": "Character Images to Base64"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn [{\n  json: {\n    character_base64: items.map((item, i) => ({\n      character_index: i + 1,\n      base64: item.json.data,\n      mimetype: item.json.mimetype || 'image/jpeg'\n    }))\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -144,
+        -304
+      ],
+      "id": "8ba6ee51-6f0c-4d6c-abca-c904dae7ff93",
+      "name": "Build Base64 Map"
+    },
+    {
+      "parameters": {
+        "jsCode": "const charData = $('Build Base64 Map').first().json.character_base64;\nconst body = $('Webhook').first().json.body;\n\nreturn body.chunks.map(chunk => {\n  const parts = [\n    { text: chunk.image_prompt }\n  ];\n\n  for (const charIdx of chunk.characters_used) {\n    const char = charData.find(c => c.character_index === charIdx);\n    if (char) {\n      parts.push({\n        inline_data: {\n          mime_type: char.mimetype,\n          data: char.base64\n        }\n      });\n    }\n  }\n\n  return {\n    json: {\n      chunk_number: chunk.chunk_number,\n      script: chunk.script,\n      duration_seconds: chunk.duration_seconds,\n      payload: {\n        contents: [{ parts }],\n        generationConfig: {\n          responseModalities: [\"TEXT\", \"IMAGE\"],\n          imageConfig: {\n            aspectRatio: \"16:9\",\n            imageSize: \"1K\"\n          }\n        }\n      }\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1184,
+        112
+      ],
+      "id": "ab369a0d-bab5-4b0d-b22a-b8bb1648671c",
+      "name": "Build Scene Image Payloads"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.payload }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -992,
+        112
+      ],
+      "id": "60c70ebf-f7ab-44aa-a72d-1ec76955accd",
+      "name": "Nano Banana Scene Generate",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0LLm5rFvWBdqzrwW",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b5b58c86-29ff-4815-84dd-e54331612abb",
+              "name": "data",
+              "value": "={{ $json.candidates[0].content.parts[0].inlineData.data }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -768,
+        112
+      ],
+      "id": "a62aa103-8a83-4b5b-a612-92ec43770f23",
+      "name": "Extract Scene Image"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        -560,
+        112
+      ],
+      "id": "4667564d-1d6a-40ee-b50f-1e7c0faba4ea",
+      "name": "Scene Image to File"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cloudinary = $input.all();\nconst body = $('Webhook').first().json.body;\n\nconst chunks = body.chunks.map((chunk, i) => ({\n  chunk_number: chunk.chunk_number,\n  script: chunk.script,\n  image_prompt: chunk.image_prompt,\n  duration_seconds: chunk.duration_seconds,\n  scene_image_url: cloudinary[i].json.secure_url\n}));\n\nreturn [{\n  json: {\n    title: body.title,\n    chunks: chunks\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -144,
+        112
+      ],
+      "id": "b0d3e76c-895f-46a5-819c-cee8a5a4eefc",
+      "name": "Map Scene URLs"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://dr-firass.app.n8n.cloud/webhook-test/ec089d71-c7c3-482a-b11d-f7c24ec16fbc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        64,
+        112
+      ],
+      "id": "e1546922-a21d-432b-a2c6-7b9a4ada9d36",
+      "name": "Trigger Video Workflow"
+    },
+    {
+      "parameters": {
+        "content": "## Part 2 — From Characters to Scenes: Rendering the Visual Story",
+        "height": 688,
+        "width": 2304,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1296,
+        -368
+      ],
+      "id": "0f068cf3-6ed2-4cac-bc22-dc42ac26ea1e",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "operation": "uploadFile",
+        "additionalFieldsFile": {}
+      },
+      "type": "n8n-nodes-cloudinary.cloudinary",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        112
+      ],
+      "id": "37834492-99d3-47a4-9264-7c9be77b2d22",
+      "name": "Upload an asset from file data",
+      "credentials": {
+        "cloudinaryApi": {
+          "id": "rMD7TA8aFsizV1qM",
+          "name": "Cloudinary account 7"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Split Scene Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Scene Chunks": {
+      "main": [
+        [
+          {
+            "node": "Extract Character URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Character URLs": {
+      "main": [
+        [
+          {
+            "node": "Download Character Images",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Character Images": {
+      "main": [
+        [
+          {
+            "node": "Character Images to Base64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Character Images to Base64": {
+      "main": [
+        [
+          {
+            "node": "Build Base64 Map",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Base64 Map": {
+      "main": [
+        [
+          {
+            "node": "Build Scene Image Payloads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Scene Image Payloads": {
+      "main": [
+        [
+          {
+            "node": "Nano Banana Scene Generate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nano Banana Scene Generate": {
+      "main": [
+        [
+          {
+            "node": "Extract Scene Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Scene Image": {
+      "main": [
+        [
+          {
+            "node": "Scene Image to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scene Image to File": {
+      "main": [
+        [
+          {
+            "node": "Upload an asset from file data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Scene URLs": {
+      "main": [
+        [
+          {
+            "node": "Trigger Video Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload an asset from file data": {
+      "main": [
+        [
+          {
+            "node": "Map Scene URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "507b09bc-b893-4978-b6fd-ff33e26db595",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "de822f81f3a2367cef7d9549771a77783236bc9596481be2ae65c05fbcc4b4fd"
+  },
+  "id": "bozI4QUOAMHWGrW5",
+  "tags": []
+}

@@ -1,0 +1,944 @@
+{
+  "name": "From Drawing to Story: Auto-Publish AI Video to YouTube with Blotato - PART 3 - vide",
+  "nodes": [
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"scenes\": [\n    {\n      \"chunk_number\": 1,\n      \"video_prompt\": \"Use the provided image as the first frame. ...\",\n      \"narration\": \"shortened narration here\"\n    }\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -400,
+        -112
+      ],
+      "id": "7062d5bf-012d-4147-ba89-97a5592563c2",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "amount": 11,
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -864,
+        160
+      ],
+      "id": "fffbf67c-b212-43ef-b7f5-a13cb9d0ebdd",
+      "name": "Wait",
+      "webhookId": "2f3e3d80-d332-4e14-bac5-7c0ca0e1e68a"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "47c96ffd-1daa-417b-8ccc-0702e38fbfc9",
+              "leftValue": "={{ $json.data.status }}",
+              "rightValue": "completed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -480,
+        160
+      ],
+      "id": "289a4551-d093-4511-8dc6-3f19e7d855e8",
+      "name": "If",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -32,
+        368
+      ],
+      "id": "ddaf6aff-5f16-4d6c-9fa4-e12ab6762819",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        560,
+        336
+      ],
+      "id": "c50fbec6-3de0-472f-b7a6-0b0d9678c702",
+      "name": "Wait1",
+      "webhookId": "6c77bfc5-0c47-424a-8b11-782bdefae3c9"
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -352,
+        800
+      ],
+      "id": "5d2a41f7-5e64-4ad0-9f3d-c9077e0ce75d",
+      "name": "Wait2",
+      "webhookId": "b9c47022-3343-4489-ae31-51aea256f003"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\n\nconst staticData = $getWorkflowStaticData('global');\nstaticData.title = body.title;\nstaticData.chunks = body.chunks;\n\nreturn body.chunks.map(chunk => ({\n  json: {\n    chunk_number: chunk.chunk_number,\n    script: chunk.script,\n    image_prompt: chunk.image_prompt,\n    duration_seconds: chunk.duration_seconds,\n    scene_image_url: chunk.scene_image_url\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -976,
+        -256
+      ],
+      "id": "f4f393f1-c992-449f-8714-f9964bc10063",
+      "name": "Split Video Chunks"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nlet chunkList = '';\nfor (const item of items) {\n  const c = item.json;\n  chunkList += 'Scene ' + c.chunk_number + ':\\n';\n  chunkList += 'Script: ' + c.script + '\\n';\n  chunkList += 'Image description: ' + c.image_prompt + '\\n';\n  chunkList += 'Duration: ' + c.duration_seconds + 's\\n\\n';\n}\n\nreturn [{\n  json: {\n    chunk_count: items.length,\n    chunk_list: chunkList\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -768,
+        -256
+      ],
+      "id": "efd85b98-41fd-4f2e-b74a-4f8dab1ac0d7",
+      "name": "Build Narration Context"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=I have {{ $json.chunk_count }} scenes. Write a video animation prompt and shortened narration for each.\n\n{{ $json.chunk_list }}\n\nRespond in this EXACT JSON format:\n{\n  \"scenes\": [\n    {\n      \"chunk_number\": 1,\n      \"video_prompt\": \"Use the provided image as the first frame. ...\",\n      \"narration\": \"shortened narration here\"\n    }\n  ]\n}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are an expert video prompt engineer and children's storybook narrator. You receive scene descriptions and their narration scripts. For each scene you do TWO things: 1) Write a video animation prompt for AI image-to-video generation (Kling style). 2) Rewrite the narration to be SHORTER — must take no more than 8 seconds to read aloud at a slow storytelling pace (roughly 15-18 words max). The video starts from the provided scene image. Rules for video_prompt: 1) Describe what MOVES and HOW — character gestures, facial expressions, wind, particles, camera pans/zooms. 2) Keep camera movements cinematic but gentle — slow zoom, slight pan, subtle dolly. 3) Match the mood of the narration. 4) Duration is 10 seconds per clip. 5) Start each prompt with 'Use the provided image as the first frame.' 6) No text in video. Rules for narration: 1) Keep the same story meaning but use fewer words. 2) Maximum 18 words per chunk. 3) Warm, magical tone for ages 3-7. 4) Must sound natural when read aloud. Respond ONLY valid JSON — no explanation, no markdown, no backticks."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -544,
+        -256
+      ],
+      "id": "cafeb107-0d80-458e-81f7-70978b9f4693",
+      "name": "Generate Video Prompts"
+    },
+    {
+      "parameters": {
+        "jsCode": "const scenes = $input.first().json.output.scenes;\nconst body = $('Webhook1').first().json.body;\n\nreturn scenes.map((scene, i) => ({\n  json: {\n    chunk_number: scene.chunk_number,\n    script: body.chunks[i].script,\n    duration_seconds: body.chunks[i].duration_seconds,\n    scene_image_url: body.chunks[i].scene_image_url,\n    video_prompt: scene.video_prompt\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        -256
+      ],
+      "id": "0ce3b61d-8599-4989-900e-5f2bdd148af6",
+      "name": "Merge Video Prompts"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map((item, i) => {\n  const nextImage = i < items.length - 1 ? items[i + 1].json.scene_image_url : undefined;\n\n  const payload = {\n    model: \"kwaivgi/kling-v3.0-pro/image-to-video\",\n    cfg_scale: 0.5,\n    duration: item.json.duration_seconds,\n    image: item.json.scene_image_url,\n    ...(nextImage && { end_image: nextImage }),\n    prompt: item.json.video_prompt,\n    negative_prompt: \"talking, speaking, mouth movement, lip sync, dialogue, voice, speech\",\n    sound: true\n  };\n\n  return {\n    json: {\n      chunk_number: item.json.chunk_number,\n      script: item.json.script,\n      body: JSON.stringify(payload)\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        -256
+      ],
+      "id": "ceb039dd-2993-4cc9-9f23-f675e37002cb",
+      "name": "Build Kling Payloads"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.atlascloud.ai/api/v1/model/generateVideo",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_API_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1152,
+        160
+      ],
+      "id": "3e4864b8-c4f4-4c1f-b65b-d60b07299937",
+      "name": "Atlas Cloud Generate Video"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.atlascloud.ai/api/v1/model/prediction/{{ $json.data.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_API_HERE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -688,
+        160
+      ],
+      "id": "4726a911-8771-470a-91eb-8a8114c69a4f",
+      "name": "Atlas Cloud Poll Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map((item, i) => ({\n  json: {\n    chunk_number: i + 1,\n    video_url: item.json.data.outputs[0]\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        192
+      ],
+      "id": "9ca9df76-52de-4602-8cd6-c5e1174d31ce",
+      "name": "Extract Video URLs"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.elevenlabs.io/v1/text-to-speech/onwK4e9ZLuTAKqWW03F9",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "xi-api-key",
+              "value": "YOUR_API_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        208,
+        224
+      ],
+      "id": "b70db82b-61f9-45e3-adb8-3679a15417a0",
+      "name": "ElevenLabs Narrate"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map((item, i) => ({\n  json: {\n    chunk_number: i + 1,\n    audio_url: item.json.secure_url\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        416
+      ],
+      "id": "61710398-24ce-4749-a344-f7b949dc298d",
+      "name": "Extract Audio URLs"
+    },
+    {
+      "parameters": {
+        "jsCode": "const audioItems = $input.all();\nconst videoItems = $('Extract Video URLs').all();\nconst chunkItems = $('Split Video Chunks').all();\n\nif (!chunkItems || chunkItems.length === 0) {\n  throw new Error('Aucun chunk trouvé depuis \"Split Video Chunks\".');\n}\nif (!videoItems || videoItems.length === 0) {\n  throw new Error('Aucune vidéo trouvée depuis \"Extract Video URLs\".');\n}\nif (!audioItems || audioItems.length === 0) {\n  throw new Error('Aucun audio reçu en entrée.');\n}\n\nconst staticData = $getWorkflowStaticData('global');\nconst title = staticData.title ?? chunkItems[0]?.json?.title ?? 'Sans titre';\n\nconst scenes = chunkItems.map((chunkItem, i) => ({\n  chunk_number: chunkItem.json.chunk_number,\n  duration_seconds: chunkItem.json.duration_seconds,\n  video_url: videoItems[i]?.json?.video_url ?? null,\n  audio_url: audioItems[i]?.json?.audio_url ?? null\n}));\n\nreturn [{\n  json: {\n    title: title,\n    scenes: scenes\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1152,
+        800
+      ],
+      "id": "11b0aba1-0582-4a7d-a868-953d9d2b81f1",
+      "name": "Build Shotstack Payload"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\nlet currentTime = 0;\nconst videoClips = [];\nconst audioClips = [];\n\nfor (const scene of data.scenes) {\n  videoClips.push({\n    asset: {\n      type: \"video\",\n      src: scene.video_url\n    },\n    start: currentTime,\n    length: \"auto\"\n  });\n\n  audioClips.push({\n    asset: {\n      type: \"audio\",\n      src: scene.audio_url,\n      volume: 1\n    },\n    start: currentTime,\n    length: \"auto\"\n  });\n\n  currentTime += scene.duration_seconds;\n}\n\nreturn [{\n  json: {\n    body: JSON.stringify({\n      timeline: {\n        tracks: [\n          { clips: videoClips },\n          { clips: audioClips }\n        ]\n      },\n      output: {\n        format: \"mp4\",\n        resolution: \"hd\"\n      }\n    })\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -848,
+        800
+      ],
+      "id": "ffb890c7-170c-4638-a94f-c1f13be253a6",
+      "name": "Build Shotstack Timeline"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.shotstack.io/edit/v1/render",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "YOUR_API_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -560,
+        800
+      ],
+      "id": "eb088850-0543-4252-bd6e-01209bec6888",
+      "name": "Shotstack Render"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.shotstack.io/edit/v1/render/{{ $json.response.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "YOUR_API_HERE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -160,
+        800
+      ],
+      "id": "79568c0d-4dc1-446c-93a3-1ed4874c54ab",
+      "name": "Shotstack Poll Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "const scenes = $('Generate Video Prompts').first().json.output.scenes;\n\nreturn scenes.map(scene => ({\n  json: {\n    chunk_number: scene.chunk_number,\n    narration: scene.narration,\n    body: JSON.stringify({\n      text: scene.narration,\n      model_id: \"eleven_multilingual_v2\",\n      voice_settings: {\n        stability: 0.6,\n        similarity_boost: 0.75,\n        style: 0.7,\n        use_speaker_boost: true\n      }\n    })\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        192
+      ],
+      "id": "a84327f5-c6d2-4071-ab43-58dee06bd428",
+      "name": "Prepare Narration Loop"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Story title: {{ $('Webhook1').item.json.body.title }}\n\nScene scripts:\n{{ $('Split Video Chunks').all().map(s => 'Scene ' + s.json.chunk_number + ': ' + s.json.script).join('\\n') }}\n\nGenerate a video title and description.",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a creative content writer. You receive a story title and scene scripts from an AI-generated video. Based on the content, tone, and characters, write a fitting video title and description. Rules: 1) Title should capture the essence of the story and be engaging. Max 60 characters. 2) Description should be 2-3 sentences that make people want to watch. Match the tone of the story. 3) Include 3-5 relevant hashtags at the end. 4) Respond ONLY valid JSON — no explanation, no markdown, no backticks. Format: {\"video_title\": \"...\", \"video_description\": \"...\"}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        64,
+        768
+      ],
+      "id": "28b200d7-451d-4467-bfbb-65ab7aed336b",
+      "name": "Generate Video Prompts1"
+    },
+    {
+      "parameters": {
+        "platform": "youtube",
+        "accountId": {
+          "__rl": true,
+          "value": "30379",
+          "mode": "list",
+          "cachedResultName": "Dr. Firas (PlayKids - English)",
+          "cachedResultUrl": "https://backend.blotato.com/v2/accounts/30379"
+        },
+        "postContentText": "={{ $json.output.scenes[0].description }}",
+        "postContentMediaUrls": "={{ $('Shotstack Poll Result').item.json.response.url }}",
+        "postCreateYoutubeOptionTitle": "={{ $json.output.scenes[0].video_title }}",
+        "postCreateYoutubeOptionShouldNotifySubscribers": false,
+        "postCreateYoutubeOptionMadeForKids": true,
+        "options": {
+          "scheduledTime": ""
+        }
+      },
+      "type": "@blotato/n8n-nodes-blotato.blotato",
+      "typeVersion": 2,
+      "position": [
+        464,
+        736
+      ],
+      "id": "6bad40df-756b-431b-a14d-9ac24a531462",
+      "name": "Youtube",
+      "credentials": {
+        "blotatoApi": {
+          "id": "wozsYJYLfCZO37j8",
+          "name": "Blotato account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "platform": "tiktok",
+        "accountId": {
+          "__rl": true,
+          "value": "8047",
+          "mode": "list",
+          "cachedResultName": "DR FIRASS (Dr. Firas)",
+          "cachedResultUrl": "https://backend.blotato.com/v2/accounts/8047"
+        },
+        "postContentText": "={{ $json.output.scenes[0].video_title }}",
+        "postContentMediaUrls": "={{ $('Shotstack Poll Result').item.json.response.url }}",
+        "postCreateTiktokOptionPrivacyLevel": "SELF_ONLY",
+        "options": {}
+      },
+      "type": "@blotato/n8n-nodes-blotato.blotato",
+      "typeVersion": 2,
+      "position": [
+        464,
+        896
+      ],
+      "id": "bccde307-aea2-4d35-8422-af8419c08e81",
+      "name": "Tiktok",
+      "credentials": {
+        "blotatoApi": {
+          "id": "wozsYJYLfCZO37j8",
+          "name": "Blotato account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "4959645a-b654-4f0b-a8ed-e72b892fb3b2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1184,
+        -256
+      ],
+      "id": "fdf779c6-006b-4e52-98ee-a35d20c7ab79",
+      "name": "Webhook1",
+      "webhookId": "4959645a-b654-4f0b-a8ed-e72b892fb3b2"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-4-5-20250929",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 4.5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        -528,
+        -112
+      ],
+      "id": "570f63c2-c924-48ae-b614-0ad97878f4f4",
+      "name": "Anthropic Chat Model2",
+      "credentials": {
+        "anthropicApi": {
+          "id": "A4IDzvyMHRwGcxD2",
+          "name": "Anthropic account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "uploadFile",
+        "resource_type_file": "raw",
+        "additionalFieldsFile": {}
+      },
+      "type": "n8n-nodes-cloudinary.cloudinary",
+      "typeVersion": 1,
+      "position": [
+        400,
+        224
+      ],
+      "id": "3b9c01fd-ed5f-4651-ba49-bc07fa7d1c94",
+      "name": "Upload an asset from file data2",
+      "credentials": {
+        "cloudinaryApi": {
+          "id": "rMD7TA8aFsizV1qM",
+          "name": "Cloudinary account 7"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"scenes\": [\n    {\n      \"video_title\": \"Use the provided image as the first frame. ...\",\n      \"description\": \"shortened narration here\"\n    }\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        208,
+        912
+      ],
+      "id": "e9ca383a-c917-4f23-8df0-9b4516d68291",
+      "name": "Structured Output Parser3"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-5-20250929",
+          "cachedResultName": "Claude Sonnet 4.5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        80,
+        912
+      ],
+      "id": "1739043c-67d8-4b53-b649-b5d2ee675bce",
+      "name": "Anthropic Chat Model3",
+      "credentials": {
+        "anthropicApi": {
+          "id": "A4IDzvyMHRwGcxD2",
+          "name": "Anthropic account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## IPart 3 — From Scenes to Screen: Prompts, Audio & Final Assembly",
+        "height": 1456,
+        "width": 2304,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1280,
+        -368
+      ],
+      "id": "6a447b4c-66c3-40ad-90ba-66fe3f230d30",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "# 🎬 From Drawing to Story — Auto-Publish AI Video to YouTube with Blotato\n\nTransform a hand-drawn sketch into a fully narrated, animated video — automatically generated and published to YouTube.\n\n> ⚠️ **This template is split into 3 separate workflows.**\n> Each part must be imported into its **own workflow** in n8n.\n\n---\n\n## 🎥 Tutorial\n\n@[youtube](bmx4IHX5lhI)\n\n---\n\n## ⚙️ How It Works\n\n- **Part 1** — Analyze the drawing, generate character images & write the story\n- **Part 2** — Generate scene images with character consistency\n- **Part 3** — Generate videos, narrate with AI audio & auto-publish to YouTube\n\n---\n\n## 🔐 Credentials Needed\n\n- **[Blotato](https://blotato.com/?ref=firas)** — YouTube / TikTok publishing\n- **[AtlasCloud](https://www.atlascloud.ai?ref=8QKPJE)** — Kling Pro 3.0 video generation\n- **Anthropic** — Claude AI (story & prompts)\n- **ElevenLabs** — Narration audio\n- **Shotstack** — Final video assembly\n- **Nano Banana** — Image generation\n\n---\n\n## 🚀 Setup Steps\n\n1. Configure credentials for each service above in n8n\n2. Set up a form trigger with a file upload field for the drawing\n3. Deploy the 3 workflows in order and connect them via webhooks\n4. Run a test submission with a simple sketch to validate the full pipeline",
+        "height": 2000,
+        "width": 816
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2160,
+        -368
+      ],
+      "id": "21837083-9b57-490e-86f2-0f6becdb1ee9",
+      "name": "Sticky Note2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Generate Video Prompts",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Atlas Cloud Poll Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Extract Video URLs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Extract Audio URLs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ElevenLabs Narrate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait2": {
+      "main": [
+        [
+          {
+            "node": "Shotstack Poll Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Video Chunks": {
+      "main": [
+        [
+          {
+            "node": "Build Narration Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Narration Context": {
+      "main": [
+        [
+          {
+            "node": "Generate Video Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Video Prompts": {
+      "main": [
+        [
+          {
+            "node": "Merge Video Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Video Prompts": {
+      "main": [
+        [
+          {
+            "node": "Build Kling Payloads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Kling Payloads": {
+      "main": [
+        [
+          {
+            "node": "Atlas Cloud Generate Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atlas Cloud Generate Video": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atlas Cloud Poll Result": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Video URLs": {
+      "main": [
+        [
+          {
+            "node": "Prepare Narration Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ElevenLabs Narrate": {
+      "main": [
+        [
+          {
+            "node": "Upload an asset from file data2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Audio URLs": {
+      "main": [
+        [
+          {
+            "node": "Build Shotstack Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Shotstack Payload": {
+      "main": [
+        [
+          {
+            "node": "Build Shotstack Timeline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Shotstack Timeline": {
+      "main": [
+        [
+          {
+            "node": "Shotstack Render",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shotstack Render": {
+      "main": [
+        [
+          {
+            "node": "Wait2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shotstack Poll Result": {
+      "main": [
+        [
+          {
+            "node": "Generate Video Prompts1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Narration Loop": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Video Prompts1": {
+      "main": [
+        [
+          {
+            "node": "Youtube",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Tiktok",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Split Video Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Video Prompts",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload an asset from file data2": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser3": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Generate Video Prompts1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Video Prompts1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "d76b06d6-9e99-4e77-a23c-7ecf0f9ffb87",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "de822f81f3a2367cef7d9549771a77783236bc9596481be2ae65c05fbcc4b4fd"
+  },
+  "id": "otioN6dWPtmIDOVm",
+  "tags": []
+}

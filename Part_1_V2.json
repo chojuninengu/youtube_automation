@@ -1,0 +1,776 @@
+{
+  "name": "SketchTales V2 - PART 1",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "SketchTales",
+        "formFields": {
+          "values": [
+            {
+              "fieldName": "Image",
+              "fieldLabel": "Upload your child's drawing",
+              "fieldType": "file",
+              "multipleFiles": false,
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.4,
+      "position": [
+        -1136,
+        -224
+      ],
+      "id": "2f76b949-127f-4a6f-9222-26c9022eb61e",
+      "name": "On form submission",
+      "webhookId": "0ce3c5c5-9c0f-4da5-98ee-b71f220fbee7"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3-pro-preview",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3-pro-preview"
+        },
+        "text": "You are an expert at understanding children's artwork. Analyze this drawing and extract ALL characters/creatures/people you see.\\n\\nFor each character give:\\n- A fun simple name a child would use\\n- Detailed visual description (colors, size, features, clothing, expression)\\n\\nAlso extract:\\n- Setting (where is this?)\\n- Mood (happy, adventurous, silly, etc.)\\n\\nRespond ONLY in this exact JSON format, no markdown, no backticks:\\n{\\\"characters\\\": [{\\\"name\\\": \\\"...\\\", \\\"description\\\": \\\"...\\\"}], \\\"setting\\\": \\\"...\\\", \\\"mood\\\": \\\"...\\\"}",
+        "inputType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -512,
+        -224
+      ],
+      "id": "62b93133-0cc2-4d38-813e-6ea99db9dd97",
+      "name": "Analyze an image",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0LLm5rFvWBdqzrwW",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f3431bde-ff93-412e-b836-082b3752fcf3",
+              "name": "content.parts[0].text",
+              "value": "={{ $json.content.parts[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -320,
+        -224
+      ],
+      "id": "994a2d1c-a230-465a-a62b-4ff839612c08",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "binaryPropertyName": "Image",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -928,
+        -224
+      ],
+      "id": "3625557e-a088-4f53-9383-4257406f2319",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        -720,
+        -224
+      ],
+      "id": "f0281682-da7b-4909-8b58-0d4e0da1ae06",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nlet text = response.content.parts[0].text;\ntext = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\nconst data = JSON.parse(text);\n\nconst chars = data.characters;\nlet charList = '';\nlet jsonFormat = '{\\n';\n\nfor (let i = 0; i < chars.length; i++) {\n  charList += 'Character ' + (i + 1) + ': ' + chars[i].name + ' \u2014 ' + chars[i].description + '\\n\\n';\n  if (i < chars.length - 1) {\n    jsonFormat += '  \"character_' + (i + 1) + '_prompt\": \"...\",\\n';\n  } else {\n    jsonFormat += '  \"character_' + (i + 1) + '_prompt\": \"...\"\\n';\n  }\n}\n\njsonFormat += '}';\n\nreturn chars.map((char, i) => ({\n  json: {\n    character_index: i + 1,\n    character_name: char.name,\n    character_desc: char.description,\n    character_count: chars.length\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        -224
+      ],
+      "id": "4d41e7df-5b82-4766-b413-d6281b3220a8",
+      "name": "Parse Characters"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nlet charList = '';\nlet jsonFormat = '{\\n';\n\nfor (let i = 0; i < items.length; i++) {\n  const c = items[i].json;\n  charList += 'Character ' + c.character_index + ': ' + c.character_name + ' \u2014 ' + c.character_desc + '\\n\\n';\n  if (i < items.length - 1) {\n    jsonFormat += '  \"character_' + c.character_index + '_prompt\": \"...\",\\n';\n  } else {\n    jsonFormat += '  \"character_' + c.character_index + '_prompt\": \"...\"\\n';\n  }\n}\n\njsonFormat += '}';\n\nreturn [{\n  json: {\n    character_count: items.length,\n    character_list: charList,\n    json_format: jsonFormat\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1136,
+        176
+      ],
+      "id": "95e0e728-9252-439d-8b66-4688b8d541a8",
+      "name": "Build Character Prompt"
+    },
+    {
+      "parameters": {
+        "jsCode": "const prompts = $input.first().json.output.prompts;\n\nreturn prompts.map(p => ({\n  json: {\n    character_index: p.character_index,\n    character_name: p.character_name,\n    prompt: p.prompt\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -544,
+        176
+      ],
+      "id": "0cf4372c-8845-4bde-a114-4af2c14b3df5",
+      "name": "Split Character Prompts"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst base64 = $('Extract from File').first().json.data;\n\nreturn items.map(item => ({\n  json: {\n    character_index: item.json.character_index,\n    character_name: item.json.character_name,\n    payload: {\n      contents: [\n        {\n          parts: [\n            { text: item.json.prompt },\n            {\n              inline_data: {\n                mime_type: \"image/png\",\n                data: base64\n              }\n            }\n          ]\n        }\n      ],\n      generationConfig: {\n        responseModalities: [\"TEXT\", \"IMAGE\"],\n        imageConfig: {\n          aspectRatio: \"16:9\",\n          imageSize: \"1K\"\n        }\n      }\n    }\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -336,
+        176
+      ],
+      "id": "57abf4fe-df7d-4d2c-856e-bf86be183e5d",
+      "name": "Nano Banana Payload"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.payload }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -112,
+        176
+      ],
+      "id": "e2d0ce89-95d2-4bac-9039-bfc7452e471c",
+      "name": "Nano Banana Generate",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0LLm5rFvWBdqzrwW",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b5b58c86-29ff-4815-84dd-e54331612abb",
+              "name": "data",
+              "value": "={{ $json.candidates[0].content.parts[0].inlineData.data }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        112,
+        176
+      ],
+      "id": "8a87bb72-f8dc-4e59-9188-07f5a59ebc39",
+      "name": "Extract Character Image"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        320,
+        176
+      ],
+      "id": "ce72314b-bad4-4a3e-a3cf-e5778a8f2df4",
+      "name": "Character Image to File"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cloudinary = $input.all();\nconst characters = $('Parse Characters').all(); // change to your code node name that has character_name\n\nreturn cloudinary.map((item, i) => ({\n  json: {\n    character_index: i + 1,\n    character_name: characters[i].json.character_name,\n    character_image_url: item.json.secure_url\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        176
+      ],
+      "id": "ebe4945e-fc39-4f99-851d-26725abe3151",
+      "name": "Map Character URLs"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nlet charList = '';\nlet charMap = [];\n\nfor (const item of items) {\n  const c = item.json;\n  charList += c.character_name + ' (image: ' + c.character_image_url + ')\\n';\n  charMap.push({\n    character_index: c.character_index,\n    character_name: c.character_name,\n    character_image_url: c.character_image_url\n  });\n}\n\nreturn [{\n  json: {\n    character_count: items.length,\n    character_list: charList,\n    character_map: charMap\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1120,
+        576
+      ],
+      "id": "5e9ec574-ca35-41a2-a8c3-592be98e5e47",
+      "name": "Build Story Context"
+    },
+    {
+      "parameters": {
+        "jsCode": "const story = $input.first().json.output;\nconst charMap = $('Map Character URLs').all(); // change to your node name with character URLs\n\nreturn story.chunks.map(chunk => ({\n  json: {\n    title: story.title,\n    chunk_number: chunk.chunk_number,\n    script: chunk.script,\n    image_prompt: chunk.image_prompt,\n    duration_seconds: chunk.duration_seconds,\n    characters_used: chunk.characters_used,\n    character_images: chunk.characters_used.map(i => \n      charMap[i - 1].json.character_image_url\n    )\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -576,
+        576
+      ],
+      "id": "e9ea7a56-53f8-4b2f-aaab-c334b69afe47",
+      "name": "Split Story Chunks"
+    },
+    {
+      "parameters": {
+        "jsCode": "const chunks = $input.all();\nconst allUrls = new Set();\n\nfor (const chunk of chunks) {\n  for (const url of chunk.json.character_images) {\n    allUrls.add(url);\n  }\n}\n\nreturn [...allUrls].map((url, i) => ({\n  json: {\n    character_index: i + 1,\n    image_url: url\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -368,
+        576
+      ],
+      "id": "02adda45-451d-4886-9f8d-b7f86ce8b013",
+      "name": "Extract Unique Character URLs"
+    },
+    {
+      "parameters": {
+        "jsCode": "const story = $('Generate Story').first().json.output;\nconst charUrls = $('Extract Unique Character URLs').all();\n\nconst characters = charUrls.map(c => ({\n  character_index: c.json.character_index,\n  image_url: c.json.image_url\n}));\n\nconst chunks = story.chunks.map(chunk => ({\n  chunk_number: chunk.chunk_number,\n  script: chunk.script,\n  image_prompt: chunk.image_prompt,\n  duration_seconds: chunk.duration_seconds,\n  characters_used: chunk.characters_used,\n  character_images: chunk.characters_used.map(i =>\n    characters.find(c => c.character_index === i).image_url\n  )\n}));\n\nreturn [{\n  json: {\n    title: story.title,\n    characters: characters,\n    chunks: chunks\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        576
+      ],
+      "id": "b58a9e37-5686-4fc1-a5cc-a2994b304179",
+      "name": "Build Scene Payload"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/part2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        48,
+        576
+      ],
+      "id": "87fa34d4-8e6b-4eef-936e-bb23e668201c",
+      "name": "Trigger Scene Workflow"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"prompts\": [\n    {\n      \"character_index\": 1,\n      \"character_name\": \"...\",\n      \"prompt\": \"...\"\n    }\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -768,
+        304
+      ],
+      "id": "a67e7229-d5ef-4bd8-8883-81989befe3c5",
+      "name": "Structured Output Parser2"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "models/gemini-1.5-flash",
+          "mode": "list",
+          "cachedResultName": "Gemini 1.5 Flash"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -912,
+        304
+      ],
+      "id": "297e78af-2bbc-4410-9f35-bf93e006526a",
+      "name": "Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"title\": \"...\",\n  \"chunks\": [\n    {\n      \"chunk_number\": 1,\n      \"script\": \"...\",\n      \"image_prompt\": \"...\",\n      \"characters_used\": [1],\n      \"duration_seconds\": 10\n    }\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -784,
+        736
+      ],
+      "id": "3dd527ee-0a3d-4854-99ba-ac84af827cd3",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "models/gemini-1.5-flash",
+          "mode": "list",
+          "cachedResultName": "Gemini 1.5 Flash"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -928,
+        736
+      ],
+      "id": "5d787eca-4a29-42eb-8535-62c84bd4a775",
+      "name": "Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "uploadFile",
+        "additionalFieldsFile": {}
+      },
+      "type": "n8n-nodes-cloudinary.cloudinary",
+      "typeVersion": 1,
+      "position": [
+        544,
+        176
+      ],
+      "id": "2722d59c-0d9f-4ce2-8aaf-3cb217ec6f35",
+      "name": "Upload an asset from file data1",
+      "credentials": {
+        "cloudinaryApi": {
+          "id": "rMD7TA8aFsizV1qM",
+          "name": "Cloudinary account 7"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a children's story using these {{ $json.character_count }} characters:\n\n{{ $json.character_list }}\n\nRespond in this EXACT JSON format:\n{\n  \"title\": \"...\",\n  \"chunks\": [\n    {\n      \"chunk_number\": 1,\n      \"script\": \"narration text here\",\n      \"image_prompt\": \"Using the attached character images as reference, create a scene showing...\",\n      \"characters_used\": [1, 2],\n      \"duration_seconds\": 10\n    }\n  ]\n}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a beloved children's storybook author and visual director. You write short, magical stories for ages 3-7. You will receive characters from a child's drawing. Write a story in chunks. Each chunk is about 10 seconds of narration (2-3 sentences). For each chunk you also write a detailed image generation prompt for the scene illustration. Rules: 1) Use the EXACT character names provided in the narration. 2) Each chunk specifies which characters appear by their index number. 3) Story has a beginning, a small adventure, a resolution, and a warm ending. 4) Language is simple, warm, magical \u2014 sensory details, sounds, colors, feelings. 5) Keep it to 4-6 chunks total. 6) Each image_prompt MUST start with 'Using the attached character images as reference, create a scene showing...' 7) Image style for ALL: 'soft watercolor, rounded shapes, warm lighting, children's storybook animation, Pixar meets Eric Carle'. 8) Include scene setting, character poses, expressions, actions, and mood in each image_prompt. 9) duration_seconds should match how long the narration takes to read aloud slowly. 10) Respond ONLY valid JSON \u2014 no explanation, no markdown, no backticks."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -928,
+        576
+      ],
+      "id": "3d3c440e-90d0-4a2d-b27f-9273d062c217",
+      "name": "Generate Story"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=I have {{ $json.character_count }} characters. Generate an image prompt for each.\n\n{{ $json.character_list }}\n\nReturn EXACTLY {{ $json.character_count }} items in this JSON format:\n{{ $json.json_format }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are an expert prompt engineer for AI image generation. You will receive characters from a child's drawing. Write a detailed image generation prompt for EACH character that will be sent to an image-to-image AI model along with the original drawing as reference. All characters must share the SAME art style so they belong in the same storybook. Rules: 1) Every prompt MUST start with 'Using the attached image as reference, create an animated cartoon version of...'. 2) Reference EXACT colors, features, clothing, proportions. 3) Every prompt includes 'front-facing, full body, clean white background'. 4) Style for ALL: 'soft watercolor, rounded shapes, warm lighting, children's storybook animation, Pixar meets Eric Carle'. 5) No text in image. 6) ONE character per prompt \u2014 isolate only that character from the drawing. 7) Respond ONLY valid JSON \u2014 no explanation, no markdown, no backticks."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -912,
+        160
+      ],
+      "id": "c1e0769a-2aa4-4a75-a050-7a951cedbc79",
+      "name": "Generate Character Prompts"
+    },
+    {
+      "parameters": {
+        "content": "## Part 1 \u2014 From Drawing to Story: Characters, Images & Narrative",
+        "height": 1264,
+        "width": 2320,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1280,
+        -368
+      ],
+      "id": "c34e4a33-3ec6-4789-ab05-967a6779b28d",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "# \ud83c\udfac From Drawing to Story \u2014 Auto-Publish AI Video to YouTube with Blotato\n\nTransform a hand-drawn sketch into a fully narrated, animated video \u2014 automatically generated and published to YouTube.\n\n> \u26a0\ufe0f **This template is split into 3 separate workflows.**\n> Each part must be imported into its **own workflow** in n8n.\n\n---\n\n## \ud83c\udfa5 Tutorial\n\n@[youtube](bmx4IHX5lhI)\n\n---\n\n## \u2699\ufe0f How It Works\n\n- **Part 1** \u2014 Analyze the drawing, generate character images & write the story\n- **Part 2** \u2014 Generate scene images with character consistency\n- **Part 3** \u2014 Generate videos, narrate with AI audio & auto-publish to YouTube\n\n---\n\n## \ud83d\udd10 Credentials Needed\n\n- **[Blotato](https://blotato.com/?ref=firas)** \u2014 YouTube / TikTok publishing\n- **[AtlasCloud](https://www.atlascloud.ai?ref=8QKPJE)** \u2014 Kling Pro 3.0 video generation\n- **Anthropic** \u2014 Claude AI (story & prompts)\n- **ElevenLabs** \u2014 Narration audio\n- **Shotstack** \u2014 Final video assembly\n- **Nano Banana** \u2014 Image generation\n\n---\n\n## \ud83d\ude80 Setup Steps\n\n1. Configure credentials for each service above in n8n\n2. Set up a form trigger with a file upload field for the drawing\n3. Deploy the 3 workflows in order and connect them via webhooks\n4. Run a test submission with a simple sketch to validate the full pipeline",
+        "height": 2000,
+        "width": 816
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2160,
+        -368
+      ],
+      "id": "d8ba171c-5dad-4a41-a800-e3a01c711dc3",
+      "name": "Sticky Note2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze an image": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Parse Characters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Analyze an image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Characters": {
+      "main": [
+        [
+          {
+            "node": "Build Character Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Character Prompt": {
+      "main": [
+        [
+          {
+            "node": "Generate Character Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Character Prompts": {
+      "main": [
+        [
+          {
+            "node": "Nano Banana Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nano Banana Payload": {
+      "main": [
+        [
+          {
+            "node": "Nano Banana Generate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nano Banana Generate": {
+      "main": [
+        [
+          {
+            "node": "Extract Character Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Character Image": {
+      "main": [
+        [
+          {
+            "node": "Character Image to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Character Image to File": {
+      "main": [
+        [
+          {
+            "node": "Upload an asset from file data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Character URLs": {
+      "main": [
+        [
+          {
+            "node": "Build Story Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Story Context": {
+      "main": [
+        [
+          {
+            "node": "Generate Story",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Story Chunks": {
+      "main": [
+        [
+          {
+            "node": "Extract Unique Character URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Unique Character URLs": {
+      "main": [
+        [
+          {
+            "node": "Build Scene Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Scene Payload": {
+      "main": [
+        [
+          {
+            "node": "Trigger Scene Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser2": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Generate Character Prompts",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Character Prompts",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Generate Story",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Story",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload an asset from file data1": {
+      "main": [
+        [
+          {
+            "node": "Map Character URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Story": {
+      "main": [
+        [
+          {
+            "node": "Split Story Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Character Prompts": {
+      "main": [
+        [
+          {
+            "node": "Split Character Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "c9fe5e7c-39df-4361-a483-e385b138a9de",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "de822f81f3a2367cef7d9549771a77783236bc9596481be2ae65c05fbcc4b4fd"
+  },
+  "id": "fjnRUCKjc9yRNNpO",
+  "tags": []
+}
