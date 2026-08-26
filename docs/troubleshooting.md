@@ -33,3 +33,7 @@ This document tracks common issues encountered during the initial setup of Sketc
 ### 8. Analyze an image: "The resource you are requesting could not be found"
 **Issue:** The Gemini API rejects the image generation or analysis request because the model name is invalid or deprecated (e.g., `gemini-3-pro-preview`).
 **Solution:** The model names in the workflow have been updated to use the correct production models (`gemini-1.5-flash` for analysis and `gemini-3.1-flash-image` for generation). (Fixed in Part_1_V2 and Part_2_V2).
+
+### 9. Gemini Node: "The connection was aborted, perhaps the server is offline"
+**Issue:** Node.js inside Docker can sometimes aggressively prefer IPv6, causing `ECONNRESET` or connection drops when talking to Google's API. Additionally, image analysis can take a long time, triggering n8n's default timeouts.
+**Solution:** The `docker-compose.yml` file has been updated with `NODE_OPTIONS=--dns-result-order=ipv4first` to force IPv4, and `N8N_HTTP_TIMEOUT=120000` to extend the timeout window to 2 minutes.
