@@ -35,6 +35,8 @@ services:
       - NODE_ENV=production
       - WEBHOOK_URL=http://localhost:5678/
       - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - NODE_OPTIONS=--dns-result-order=ipv4first
+      - N8N_HTTP_TIMEOUT=120000
     ports:
       - "5678:5678"
     volumes:
