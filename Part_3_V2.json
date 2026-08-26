@@ -276,7 +276,8 @@
         "description": "={{ $json.output.scenes[0].video_description }}",
         "categoryId": "1",
         "privacyStatus": "private",
-        "binaryPropertyName": "data"
+        "binaryPropertyName": "data",
+        "resource": "video"
       },
       "type": "n8n-nodes-base.youTube",
       "typeVersion": 1,
