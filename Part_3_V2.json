@@ -295,37 +295,6 @@
     },
     {
       "parameters": {
-        "platform": "tiktok",
-        "accountId": {
-          "__rl": true,
-          "value": "8047",
-          "mode": "list",
-          "cachedResultName": "DR FIRASS (Dr. Firas)",
-          "cachedResultUrl": "https://backend.blotato.com/v2/accounts/8047"
-        },
-        "postContentText": "={{ $json.output.scenes[0].video_title }}",
-        "postContentMediaUrls": "={{ $('Shotstack Poll Result').item.json.response.url }}",
-        "postCreateTiktokOptionPrivacyLevel": "SELF_ONLY",
-        "options": {}
-      },
-      "type": "@blotato/n8n-nodes-blotato.blotato",
-      "typeVersion": 2,
-      "position": [
-        464,
-        896
-      ],
-      "id": "bccde307-aea2-4d35-8422-af8419c08e81",
-      "name": "Tiktok",
-      "credentials": {
-        "blotatoApi": {
-          "id": "wozsYJYLfCZO37j8",
-          "name": "Blotato account"
-        }
-      },
-      "disabled": true
-    },
-    {
-      "parameters": {
         "httpMethod": "POST",
         "path": "part3",
         "options": {}
@@ -624,11 +593,6 @@
         [
           {
             "node": "Youtube",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Tiktok",
             "type": "main",
             "index": 0
           }
