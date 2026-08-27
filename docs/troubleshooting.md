@@ -37,3 +37,7 @@ This document tracks common issues encountered during the initial setup of Sketc
 ### 9. Gemini Node: "The connection was aborted, perhaps the server is offline"
 **Issue:** Node.js inside Docker can sometimes aggressively prefer IPv6, causing `ECONNRESET` or connection drops when talking to Google's API. Additionally, image analysis can take a long time, triggering n8n's default timeouts.
 **Solution:** The `docker-compose.yml` file has been updated with `NODE_OPTIONS=--dns-result-order=ipv4first` to force IPv4, and `N8N_HTTP_TIMEOUT=120000` to extend the timeout window to 2 minutes.
+
+### 10. Nano Banana Generate: "The service is receiving too many requests from you"
+**Issue:** Google's image generation API (`gemini-3.1-flash-image` or Imagen) requires a billing account attached to your Google Cloud project, even if you are only using the Free Tier quota. If no billing account is linked, your image generation quota is effectively **0**, resulting in an instant 429 Too Many Requests error on your very first try.
+**Solution:** Go to your Google Cloud Console and link a valid Billing Account to the project you used to generate the Gemini API key. Also, keep in mind that the Free Tier allows very few images per minute, so n8n is configured to automatically retry every 5 seconds if it hits a temporary speed bump.
