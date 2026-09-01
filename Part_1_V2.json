@@ -163,22 +163,9 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "googlePalmApi",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ $json.payload }}",
+        "method": "GET",
+        "url": "https://image.pollinations.ai/prompt/{{ encodeURIComponent($json.prompt) }}",
+        "responseFormat": "file",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -190,51 +177,7 @@
       "id": "e2d0ce89-95d2-4bac-9039-bfc7452e471c",
       "name": "Nano Banana Generate",
       "retryOnFail": true,
-      "waitBetweenTries": 5000,
-      "credentials": {
-        "googlePalmApi": {
-          "id": "0LLm5rFvWBdqzrwW",
-          "name": "Google Gemini(PaLM) Api account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "b5b58c86-29ff-4815-84dd-e54331612abb",
-              "name": "data",
-              "value": "={{ $json.candidates[0].content.parts[0].inlineData.data }}",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        112,
-        176
-      ],
-      "id": "8a87bb72-f8dc-4e59-9188-07f5a59ebc39",
-      "name": "Extract Character Image"
-    },
-    {
-      "parameters": {
-        "operation": "toBinary",
-        "sourceProperty": "data",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.convertToFile",
-      "typeVersion": 1.1,
-      "position": [
-        320,
-        176
-      ],
-      "id": "ce72314b-bad4-4a3e-a3cf-e5778a8f2df4",
-      "name": "Character Image to File"
+      "waitBetweenTries": 5000
     },
     {
       "parameters": {
@@ -595,28 +538,6 @@
       ]
     },
     "Nano Banana Generate": {
-      "main": [
-        [
-          {
-            "node": "Extract Character Image",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract Character Image": {
-      "main": [
-        [
-          {
-            "node": "Character Image to File",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Character Image to File": {
       "main": [
         [
           {

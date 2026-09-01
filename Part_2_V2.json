@@ -114,22 +114,9 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "googlePalmApi",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ $json.payload }}",
+        "method": "GET",
+        "url": "https://image.pollinations.ai/prompt/{{ encodeURIComponent($json.prompt) }}",
+        "responseFormat": "file",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -141,51 +128,7 @@
       "id": "60c70ebf-f7ab-44aa-a72d-1ec76955accd",
       "name": "Nano Banana Scene Generate",
       "retryOnFail": true,
-      "waitBetweenTries": 5000,
-      "credentials": {
-        "googlePalmApi": {
-          "id": "0LLm5rFvWBdqzrwW",
-          "name": "Google Gemini(PaLM) Api account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "b5b58c86-29ff-4815-84dd-e54331612abb",
-              "name": "data",
-              "value": "={{ $json.candidates[0].content.parts[0].inlineData.data }}",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        -768,
-        112
-      ],
-      "id": "a62aa103-8a83-4b5b-a612-92ec43770f23",
-      "name": "Extract Scene Image"
-    },
-    {
-      "parameters": {
-        "operation": "toBinary",
-        "sourceProperty": "data",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.convertToFile",
-      "typeVersion": 1.1,
-      "position": [
-        -560,
-        112
-      ],
-      "id": "4667564d-1d6a-40ee-b50f-1e7c0faba4ea",
-      "name": "Scene Image to File"
+      "waitBetweenTries": 5000
     },
     {
       "parameters": {
@@ -335,28 +278,6 @@
       ]
     },
     "Nano Banana Scene Generate": {
-      "main": [
-        [
-          {
-            "node": "Extract Scene Image",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract Scene Image": {
-      "main": [
-        [
-          {
-            "node": "Scene Image to File",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Scene Image to File": {
       "main": [
         [
           {
