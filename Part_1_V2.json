@@ -7,7 +7,7 @@
         "formFields": {
           "values": [
             {
-              "fieldName": "Image",
+              "fieldName": "data",
               "fieldLabel": "Upload your child's drawing",
               "fieldType": "file",
               "multipleFiles": false,
