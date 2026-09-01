@@ -82,7 +82,7 @@
     {
       "parameters": {
         "operation": "binaryToPropery",
-        "binaryPropertyName": "Image",
+        "binaryPropertyName": "data",
         "options": {}
       },
       "type": "n8n-nodes-base.extractFromFile",
