@@ -29,32 +29,23 @@
     },
     {
       "parameters": {
-        "resource": "image",
-        "operation": "analyze",
-        "modelId": {
-          "__rl": true,
-          "value": "models/gemini-1.5-flash",
-          "mode": "list",
-          "cachedResultName": "Gemini 1.5 Flash"
-        },
-        "text": "You are an expert at understanding children's artwork. Analyze this drawing and extract ALL characters/creatures/people you see.\\n\\nFor each character give:\\n- A fun simple name a child would use\\n- Detailed visual description (colors, size, features, clothing, expression)\\n\\nAlso extract:\\n- Setting (where is this?)\\n- Mood (happy, adventurous, silly, etc.)\\n\\nRespond ONLY in this exact JSON format, no markdown, no backticks:\\n{\\\"characters\\\": [{\\\"name\\\": \\\"...\\\", \\\"description\\\": \\\"...\\\"}], \\\"setting\\\": \\\"...\\\", \\\"mood\\\": \\\"...\\\"}",
-        "inputType": "binary",
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: \"meta-llama/llama-3.2-11b-vision-instruct:free\",\n  messages: [\n    {\n      role: \"user\",\n      content: [\n        { type: \"text\", text: \"You are an expert at understanding children's artwork. Analyze this drawing and extract ALL characters/creatures/people you see.\\n\\nFor each character give:\\n- A fun simple name a child would use\\n- Detailed visual description (colors, size, features, clothing, expression)\\n\\nAlso extract:\\n- Setting (where is this?)\\n- Mood (happy, adventurous, silly, etc.)\\n\\nRespond ONLY in this exact JSON format, no markdown, no backticks:\\n{\\\\\"characters\\\\\": [{\\\\\"name\\\\\": \\\\\"...\\\\\", \\\\\"description\\\\\": \\\\\"...\\\\\"}], \\\\\"setting\\\\\": \\\\\"...\\\\\", \\\\\"mood\\\\\": \\\\\"...\\\\\"}\" },\n        { type: \"image_url\", image_url: { url: \"data:\" + $binary.data.mimeType + \";base64,\" + $binary.data.data } }\n      ]\n    }\n  ]\n}) }}",
         "options": {}
       },
-      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1.1,
       "position": [
         -512,
         -224
       ],
       "id": "62b93133-0cc2-4d38-813e-6ea99db9dd97",
-      "name": "Analyze an image",
-      "credentials": {
-        "googlePalmApi": {
-          "id": "0LLm5rFvWBdqzrwW",
-          "name": "Google Gemini(PaLM) Api account 2"
-        }
-      }
+      "name": "Analyze an image"
     },
     {
       "parameters": {
@@ -63,7 +54,7 @@
             {
               "id": "f3431bde-ff93-412e-b836-082b3752fcf3",
               "name": "content.parts[0].text",
-              "value": "={{ $json.content.parts[0].text }}",
+              "value": "={{ $json.choices[0].message.content }}",
               "type": "string"
             }
           ]
@@ -277,28 +268,17 @@
     },
     {
       "parameters": {
-        "model": {
-          "__rl": true,
-          "value": "models/gemini-1.5-flash",
-          "mode": "list",
-          "cachedResultName": "Gemini 1.5 Flash"
-        },
+        "model": "google/gemini-flash-1.5-exp:free",
         "options": {}
       },
-      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1,
       "position": [
         -912,
         304
       ],
       "id": "297e78af-2bbc-4410-9f35-bf93e006526a",
-      "name": "Gemini Chat Model1",
-      "credentials": {
-        "googlePalmApi": {
-          "id": "",
-          "name": "Google Gemini(PaLM) Api account"
-        }
-      }
+      "name": "Gemini Chat Model1"
     },
     {
       "parameters": {
@@ -315,28 +295,17 @@
     },
     {
       "parameters": {
-        "model": {
-          "__rl": true,
-          "value": "models/gemini-1.5-flash",
-          "mode": "list",
-          "cachedResultName": "Gemini 1.5 Flash"
-        },
+        "model": "google/gemini-flash-1.5-exp:free",
         "options": {}
       },
-      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1,
       "position": [
         -928,
         736
       ],
       "id": "5d787eca-4a29-42eb-8535-62c84bd4a775",
-      "name": "Gemini Chat Model",
-      "credentials": {
-        "googlePalmApi": {
-          "id": "",
-          "name": "Google Gemini(PaLM) Api account"
-        }
-      }
+      "name": "Gemini Chat Model"
     },
     {
       "parameters": {
