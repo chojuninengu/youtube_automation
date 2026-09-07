@@ -31,8 +31,16 @@
       "parameters": {
         "method": "POST",
         "url": "https://openrouter.ai/api/v1/chat/completions",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_OPENROUTER_API_KEY"
+            }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "{\n  \"model\": \"meta-llama/llama-3.2-11b-vision-instruct:free\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": [\n        {\n          \"type\": \"text\",\n          \"text\": \"You are an expert at understanding children's artwork. Analyze this drawing and extract ALL characters/creatures/people you see.\\\\n\\\\nFor each character give:\\\\n- A fun simple name a child would use\\\\n- Detailed visual description (colors, size, features, clothing, expression)\\\\n\\\\nAlso extract:\\\\n- Setting (where is this?)\\\\n- Mood (happy, adventurous, silly, etc.)\\\\n\\\\nRespond ONLY in this exact JSON format, no markdown, no backticks:\\\\n{\\\\\\\"characters\\\\\\\": [{\\\\\\\"name\\\\\\\": \\\\\\\"...\\\\\\\", \\\\\\\"description\\\\\\\": \\\\\\\"...\\\\\\\"}], \\\\\\\"setting\\\\\\\": \\\\\\\"...\\\\\\\", \\\\\\\"mood\\\\\\\": \\\\\\\"...\\\\\\\"}\"\n        },\n        {\n          \"type\": \"image_url\",\n          \"image_url\": {\n            \"url\": \"data:{{ $binary.data.mimeType }};base64,{{ $binary.data.data }}\"\n          }\n        }\n      ]\n    }\n  ]\n}",
