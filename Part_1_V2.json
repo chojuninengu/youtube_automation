@@ -477,6 +477,11 @@
             "node": "Build Character Prompt",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Build Story Context",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
