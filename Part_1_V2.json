@@ -276,7 +276,7 @@
     },
     {
       "parameters": {
-        "model": "google/gemini-flash-1.5-exp:free",
+        "model": "openrouter/free",
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
@@ -303,7 +303,7 @@
     },
     {
       "parameters": {
-        "model": "google/gemini-flash-1.5-exp:free",
+        "model": "openrouter/free",
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
